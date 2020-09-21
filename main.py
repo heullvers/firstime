@@ -24,18 +24,23 @@ codigos = soup.find_all('div', class_="event__match")
 urlBaseJanela = 'https://www.flashscore.com.br/jogo/'
 urlBaseJanelaComplemento = '/#resumo-de-jogo'
 urlBaseJanelaEstatisticaComplemento = '/#estatisticas-de-jogo;1'
+urlBaseJanelaOddsComplemento = '/#comparacao-de-odds;1x2-odds;1-tempo'
 
 linksJogos = []
 linksEstatisticasJogos = []
+linksOdds = []
 for codigo in codigos:
     codigoNovo = (codigo['id'])[4:]
     link = urlBaseJanela + codigoNovo + urlBaseJanelaComplemento
     linkE = urlBaseJanela + codigoNovo + urlBaseJanelaEstatisticaComplemento
+    linkO = urlBaseJanela + codigoNovo + urlBaseJanelaOddsComplemento
     linksJogos.append(link)
     linksEstatisticasJogos.append(linkE)
-'''
-#janela dos eventos do jogo
+    linksOdds.append(linkO)
+
 #trocar 0 por posicao
+
+#janela dos eventos do jogo
 jogo = linksJogos[0]
 options = webdriver.FirefoxOptions()
 options.headless = True
@@ -85,8 +90,9 @@ for evento in eventosVisitante:
     info = evento.find('span')
     if ('soccer-ball' or 'soccer-ball-own') in info['class']:
         golsVisitante += 1
-'''
+
 #trocar 0 por posicao
+
 estatisticas = linksEstatisticasJogos[0]
 options = webdriver.FirefoxOptions()
 options.headless = True
@@ -98,7 +104,55 @@ html = driver.execute_script("return document.documentElement.outerHTML")
 driver.quit()
 soup = BeautifulSoup(html, 'html.parser')
 
-parciais = soup.find_all('div', class_="statRow")
+quadro = soup.find('div', id="tab-statistics-1-statistic")
+parciais = quadro.find_all('div', class_="statRow")
+
+#Variável
+dicionario = {}
+for parcial in parciais:
+    linha = parcial.find('div', class_="statTextGroup")
+    casa = (linha.find('div', class_="statText--homeValue")).text
+    estatistica = (linha.find('div', class_="statText--titleValue")).text
+    visitante = (linha.find('div', class_="statText--awayValue")).text
+
+    if(estatistica == 'Posse de bola'):
+        casa = casa.replace('%', '')
+        visitante = visitante.replace('%', '')
     
+    dicionario[estatistica] = [casa, visitante]
+
+## Se não existir o atributo Cartões Vermelhos é criado
+'''
+try:
+    verificacao = dicionario['Cartões vermelhos']
+except:
+    dicionario['Cartões vermelhos'] = ['0','0']
+'''
 
 
+odds = linksOdds[0]
+options = webdriver.FirefoxOptions()
+options.headless = True
+driver = webdriver.Firefox(options=options)
+driver.get(odds)
+time.sleep(2)
+
+html = driver.execute_script("return document.documentElement.outerHTML")
+driver.quit()
+soup = BeautifulSoup(html, 'html.parser')
+
+oddsPrimeiroTempo = soup.find('div', id="block-1x2-1hf")
+oddsPrimeiroTempo = oddsPrimeiroTempo.find('table', id="odds_1x2")
+oddsPrimeiroTempo = oddsPrimeiroTempo.find('tbody')
+oddsPrimeiroTempo = oddsPrimeiroTempo.find('tr')
+oddsPrimeiroTempo = oddsPrimeiroTempo.find_all('span', class_="odds-wrap")
+
+oddCasa = oddsPrimeiroTempo[0].text
+oddEmpate = oddsPrimeiroTempo[1].text
+oddVisitante = oddsPrimeiroTempo[2].text
+
+dicionario['Odds'] = [oddCasa, oddEmpate, oddVisitante] 
+
+print(golsMandante)
+print(golsVisitante)
+print(dicionario)
